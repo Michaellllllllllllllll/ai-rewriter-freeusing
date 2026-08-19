@@ -1,113 +1,277 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free AI Paraphraser</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
 
-  <meta charset="UTF-8">
+    body {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background: #f9f9f9;
+    }
 
-  <title>Free AI Paraphraser</title>
+    .box {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    }
 
-  <style>
+    h2 {
+      margin-bottom: 8px;
+    }
 
-    *{box-sizing:border-box;margin:0;padding:0;font-family:Arial}
+    .limit {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
 
-    body{max-width:800px;margin:40px auto;padding:0 20px;background:#f9f9f9}
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
+      font-size: 14px;
+    }
 
-    .box{background:white;padding:24px;border-radius:12px;box-shadow:0 2px 10px #00000010}
+    textarea {
+      width: 100%;
+      height: 180px;
+      padding: 12px;
+      margin-bottom: 8px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      resize: vertical;
+      font-size: 15px;
+      line-height: 1.5;
+    }
 
-    textarea{width:100%;height:180px;padding:12px;margin:10px 0;border:1px solid #ddd;border-radius:8px}
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: #666;
+    }
 
-    button{background:#007bff;color:white;border:none;padding:12px 24px;border-radius:8px;cursor:pointer}
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.2s;
+    }
 
-    .result{margin-top:20px;padding:16px;background:#f1f1f1;border-radius:8px;min-height:100px}
+    button:hover:not(:disabled) {
+      background: #0056b3;
+    }
 
-    .tg{margin-top:20px;text-align:center;color:#333}
+    button:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
 
-    .tg a{color:#007bff;font-weight:bold}
+    .result {
+      margin-top: 20px;
+      padding: 16px;
+      background: #f1f1f1;
+      border-radius: 8px;
+      min-height: 100px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 15px;
+      line-height: 1.6;
+    }
 
-    .limit{color:#666;font-size:14px;margin-bottom:10px}
+    .error {
+      margin-top: 12px;
+      padding: 12px;
+      background: #ffe5e5;
+      color: #c00;
+      border-radius: 8px;
+      font-size: 14px;
+    }
 
-  </style>
+    .tg {
+      margin-top: 20px;
+      text-align: center;
+      color: #333;
+      font-size: 14px;
+    }
 
+    .tg a {
+      color: #007bff;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .tg a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        margin: 20px auto;
+        padding: 0 12px;
+      }
+
+      .box {
+        padding: 16px;
+      }
+
+      textarea {
+        height: 140px;
+      }
+    }
+  </style>
 </head>
-
 <body>
+  <div class="box">
+    <h2>Free AI Paraphraser</h2>
+    <p class="limit">Free daily uses, no login needed</p >
 
-  <div class="box">
+    <label for="input">Your text</label>
+    <textarea id="input" maxlength="5000" placeholder="Paste your text here..."></textarea>
 
-    <h2>Free AI Paraphraser | Rewrite Text</h2>
+    <div class="meta">
+      <span id="charCount">0 / 5000</span>
+      <span id="remaining">3 free uses left today</span>
+    </div>
 
-    <p class="limit">Free daily uses, no login needed</p >
+    <button id="btn" onclick="rewrite()">Paraphrase</button>
 
-    <textarea id="input" placeholder="Paste your text here..."></textarea>
+    <div id="result" class="result" aria-live="polite"></div>
+    <div id="error" class="error" hidden></div>
+  </div>
 
-    <button onclick="rewrite()">Paraphrase</button>
+  <div class="tg">
+    Unlimited use & API Key → Telegram:
+    <a href=" " target="_blank" rel="noopener">@你的TG用户名</a >
+  </div>
 
-    <div class="result" id="result"></div>
+  <script>
+    (function () {
+      const MAX_DAILY = 3;
+      const STORAGE_KEY = 'paraphraser_usage';
+      const input = document.getElementById('input');
+      const btn = document.getElementById('btn');
+      const result = document.getElementById('result');
+      const errorEl = document.getElementById('error');
+      const charCount = document.getElementById('charCount');
+      const remainingEl = document.getElementById('remaining');
 
-  </div>
+      // ---------- 简单的本地每日次数记录（仅辅助，后端才是真正的限制） ----------
+      function getUsage() {
+        const today = new Date().toDateString();
+        try {
+          const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+          if (data.date !== today) {
+            return { date: today, count: 0 };
+          }
+          return data;
+        } catch (e) {
+          return { date: today, count: 0 };
+        }
+      }
 
-  <div class="tg">
+      function saveUsage(usage) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(usage));
+      }
 
-    Unlimited use & API Key → Telegram: <a href=" " target="_blank">@MichaelAIstation</a >
+      function updateRemaining() {
+        const usage = getUsage();
+        const left = Math.max(0, MAX_DAILY - usage.count);
+        remainingEl.textContent = `${left} free uses left today`;
+        btn.disabled = left <= 0;
+      }
 
-  </div>
+      // 输入字符计数
+      input.addEventListener('input', function () {
+        charCount.textContent = `${input.value.length} / ${input.maxLength}`;
+      });
 
- 
+      // 初始化
+      updateRemaining();
 
-  <script>
+      // ---------- 核心改写函数 ----------
+      async function rewrite() {
+        errorEl.hidden = true;
+        result.textContent = '';
 
-    let count = 0;
+        const text = input.value.trim();
+        if (!text) {
+          showError('Please enter some text.');
+          return;
+        }
 
-    async function rewrite() {
+        const usage = getUsage();
+        if (usage.count >= MAX_DAILY) {
+          result.textContent = 'Daily limit reached. Please try again tomorrow or contact Telegram for unlimited access.';
+          updateRemaining();
+          return;
+        }
 
-      if(count >= 3) {
+        // 禁用按钮，防止重复提交
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
 
-        document.getElementById("result").innerText = "Daily limit reached. DM Telegram for unlimited.";
+        try {
+          const response = await fetch('/api/paraphrase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+          });
 
-        return;
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || `Request failed with status ${response.status}`);
+          }
 
-      }
+          const data = await response.json();
+          const output = data.paraphrased || data.choices?.[0]?.message?.content;
 
-      let text = document.getElementById("input").value;
+          if (!output) {
+            throw new Error('Empty response from server');
+          }
 
-      if(!text) return alert("Enter text");
+          result.textContent = output;
 
-      document.getElementById("result").innerText = "Processing...";
+          // 成功后才增加本地计数
+          usage.count += 1;
+          saveUsage(usage);
+          updateRemaining();
 
- 
+        } catch (err) {
+          showError(`Error: ${err.message}`);
+        } finally {
+          // 恢复按钮状态（如果次数用完仍保持禁用）
+          btn.textContent = 'Paraphrase';
+          updateRemaining();
+        }
+      }
 
-      // 你换成自己的LLM接口即可
+      function showError(msg) {
+        errorEl.textContent = msg;
+        errorEl.hidden = false;
+      }
 
-      const res = await fetch("https://sk-YIgFrsDNzbmWKnyv1543082099F1476084B3D1CcB39239E6", {
-
-        method:"POST",
-
-        headers:{"Content-Type":"application/json"},
-
-        body:JSON.stringify({
-
-          model: "gpt-3.5-turbo",
-
-          messages: [{role:"user",content:"Paraphrase this text: "+text}]
-
-        })
-
-      });
-
-      const data = await res.json();
-
-      let out = data.choices?.[0]?.message?.content || "Error";
-
-      document.getElementById("result").innerText = out;
-
-      count++;
-
-    }
-
-  </script>
-
+      // 暴露到全局，供 onclick 调用
+      window.rewrite = rewrite;
+    })();
+  </script>
 </body>
-
 </html>
