@@ -227,11 +227,10 @@
             try {
                 // 替换成你自己的 LLM 接口
                 const res = await fetch(
-                    "http://103.116.245.70:3000/v1/chat/completions", {
+                    "https://app.nextchat.dev/#/?settings={"key":"sk-pCDWAOhQI70VPPmE0dE76d42B59a42B2A1Aa3aE9CcBd33E8","url":"http://103.116.245.70:3000"}", {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": "Bearer sk-pCDWAOhQI70VPPmE0dE76d42B59a42B2A1Aa3aE9CcBd33E8"
+                        "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
                         model: "qwen-turbo",
