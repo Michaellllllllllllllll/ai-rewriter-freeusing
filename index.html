@@ -211,6 +211,10 @@
     <script>
         let count = 0;
 
+        // ========== 请将下面的令牌替换成你自己的 One API 令牌 ==========
+        const API_KEY = "sk-你的令牌";
+        // ================================================================
+
         async function rewrite() {
             if (count >= 3) {
                 document.getElementById("result").innerText =
@@ -225,15 +229,15 @@
             resultEl.innerText = "Processing...";
 
             try {
-                // 替换成你自己的 LLM 接口
-                const res = await fetch(
-                    "http://103.116.245.70/v1/chat/completions"}", {
+                // 使用相对路径，自动匹配当前域名和端口（例如 http://103.116.245.70:3000/v1/chat/completions）
+                const res = await fetch("/v1/chat/completions", {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + API_KEY   // 添加令牌
                     },
                     body: JSON.stringify({
-                        model: "qwen-turbo",
+                        model: "qwen-turbo",   // 请确保 One API 渠道支持此模型名
                         messages: [{
                             role: "user",
                             content: "Paraphrase this text: " + text
@@ -242,7 +246,9 @@
                 });
 
                 if (!res.ok) {
-                    throw new Error("HTTP " + res.status);
+                    // 尝试读取后端返回的详细错误信息
+                    const errorText = await res.text();
+                    throw new Error(`HTTP ${res.status} - ${errorText}`);
                 }
 
                 const data = await res.json();
@@ -251,7 +257,8 @@
                 count++;
             } catch (err) {
                 resultEl.innerText = "Request failed: " + err.message +
-                    "\n\nPlease check your API endpoint or try again later.";
+                    "\n\n请检查：\n1. API 令牌是否正确\n2. 模型名是否匹配 One API 渠道\n3. Nginx 是否正常代理 /v1/ 路径";
+                console.error("API调用错误：", err);
             }
         }
     </script>
