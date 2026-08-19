@@ -227,7 +227,7 @@
             try {
                 // 替换成你自己的 LLM 接口
                 const res = await fetch(
-                    "http://103.116.245.70:3000/v1", {
+                    "http://103.116.245.70:3000/v1/chat/completions", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
